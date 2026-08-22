@@ -178,11 +178,10 @@ export async function setCounterFree(
 
 export async function manualCall(
     server: string,
-code:string,
-flowId:string,
-locationId:string,
-counterId:string,
-
+    code: string,
+    flowId: string,
+    locationId: string,
+    counterId: string
 ) {
 
     const response = await fetch(
