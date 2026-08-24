@@ -1,17 +1,11 @@
 import { useState } from "react";
-import {
-    Alert,
-    Button,
-    Center,
-    Group,
-    Paper,
-    Stack,
-    Text
-} from "@mantine/core";
+import { Alert, Button, Group, Modal, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconVolume } from "@tabler/icons-react";
+import { IconCircleX, IconVolume } from "@tabler/icons-react";
 
 import { callNext, attendTicket, cancelTicket } from "../../api/keuesApi";
+import PanelShell from "./PanelShell";
+import NumberDisplay from "./NumberDisplay";
 
 import type { AppConfiguration } from "../../types/config";
 
@@ -26,15 +20,18 @@ export default function CallTicketPanel({ config }: Props) {
     const [ticketId, setTicketId] = useState<string | null>(null);
     const [ticketCode, setTicketCode] = useState("-");
     const [message, setMessage] = useState<string | null>(null);
+    const [calling, setCalling] = useState(false);
     const [finishing, setFinishing] = useState(false);
     const [cancelling, setCancelling] = useState(false);
+    const [cancelOpen, setCancelOpen] = useState(false);
 
 
     async function next() {
 
-        if (!config.counterId)
+        if (!config.counterId || calling)
             return;
 
+        setCalling(true);
         setMessage(null);
 
         try {
@@ -63,12 +60,15 @@ export default function CallTicketPanel({ config }: Props) {
         catch (e) {
             setMessage((e as Error).message);
         }
+        finally {
+            setCalling(false);
+        }
     }
 
 
     async function finish() {
 
-        if (!ticketId || !config.counterId)
+        if (!ticketId || !config.counterId || finishing || cancelling)
             return;
 
         setFinishing(true);
@@ -90,11 +90,10 @@ export default function CallTicketPanel({ config }: Props) {
 
     async function cancel() {
 
-        if (!ticketId || !config.counterId)
+        if (!ticketId || !config.counterId || finishing || cancelling)
             return;
 
         setCancelling(true);
-        setMessage(null);
 
         try {
             await cancelTicket(config.server, config.counterId, ticketId);
@@ -111,127 +110,80 @@ export default function CallTicketPanel({ config }: Props) {
 
 
     return (
-        <Center
-            h="100vh"
-            bg="radial-gradient(1200px 600px at 50% 20%, #e0e7ff 0%, #f8f9fa 60%)"
+        <PanelShell
+            title={config.flowName ?? "Call tickets"}
+            subtitle={config.counterName ?? "Counter"}
         >
-            <Paper
-                p="xl"
-                shadow="xl"
-                w={480}
-                radius="lg"
-                withBorder
-                style={{ borderColor: "#e5e7eb", overflow: "hidden" }}
+            <NumberDisplay value={ticketCode} caption="Current ticket" />
+
+            <Button
+                size="xl"
+                w="100%"
+                variant="filled"
+                color="blue"
+                loading={calling}
+                onClick={() => void next()}
             >
-                <div
-                    style={{
-                        height: 6,
-                        margin: -32,
-                        marginBottom: 24,
-                        background: "linear-gradient(90deg, #1a1a2e, #374151)"
-                    }}
-                />
+                Call next
+            </Button>
 
-                <Stack align="center" gap="lg">
+            <Button
+                size="xl"
+                w="100%"
+                variant="filled"
+                color="green"
+                disabled={!ticketId}
+                loading={finishing}
+                onClick={() => void finish()}
+            >
+                Finish
+            </Button>
 
-                    <Stack
-                        w="100%"
-                        px="md"
-                        py={10}
-                        gap={4}
-                        style={{
-                            borderRadius: "var(--mantine-radius-md)",
-                            background: "linear-gradient(90deg, #2563eb, #3b82f6)"
-                        }}
-                    >
-                        <Text size="lg" fw={700} c="white" ta="center" truncate>
-                            {config.flowName ?? "Call tickets"}
-                        </Text>
+            <Button
+                variant="subtle"
+                color="gray"
+                size="sm"
+                disabled={!ticketId}
+                leftSection={<IconCircleX size={16} />}
+                onClick={() => setCancelOpen(true)}
+            >
+                Cancel ticket
+            </Button>
 
-                        <Text size="sm" fw={600} c="white" ta="center" truncate>
-                            {config.counterName ?? "Counter"}
-                        </Text>
-                    </Stack>
+            {message && (
+                <Alert color={ticketId ? "red" : "yellow"} radius="md" w="100%">
+                    {message}
+                </Alert>
+            )}
 
-                    <Paper
-                        w="100%"
-                        p="xl"
-                        radius="lg"
-                        withBorder
-                        style={{
-                            background: "linear-gradient(135deg, #f5f7ff 0%, #e0e7ff 100%)",
-                            borderColor: "#c7d2fe"
-                        }}
-                    >
-                        <Stack align="center" gap={0}>
-                            <Text ta="center" style={{ fontSize: 96 }} fw={900} lh={1} color="#1a1a2e">
-                                {ticketCode}
-                            </Text>
+            <Modal
+                opened={cancelOpen}
+                onClose={() => setCancelOpen(false)}
+                centered
+                radius="lg"
+                title={<Text fw={700}>Cancel ticket</Text>}
+            >
+                <Text size="sm" c="dimmed">
+                    Cancel ticket <Text component="span" fw={700} c="dark">{ticketCode}</Text>? The customer will lose their turn.
+                </Text>
 
-                            <Text size="sm" c="dimmed">
-                                Current ticket
-                            </Text>
-                        </Stack>
-                    </Paper>
-
-                    <Button
-                        size="xl"
-                        w="100%"
-                        variant="filled"
-                        style={{ background: "linear-gradient(135deg, #2563eb, #3b82f6)" }}
-                        styles={{
-                            root: {
-                                "&:hover": {
-                                    transform: "scale(1.02)",
-                                    boxShadow: "0 8px 20px rgba(37,99,235,0.35)"
-                                }
-                            }
-                        }}
-                        onClick={next}
-                    >
-                        Call next
+                <Group justify="flex-end" gap="sm" mt="lg">
+                    <Button variant="default" onClick={() => setCancelOpen(false)}>
+                        Keep ticket
                     </Button>
 
-                    <Group grow w="100%" gap="sm">
-                        <Button
-                            size="xl"
-                            color="red"
-                            variant="filled"
-                            disabled={!ticketId}
-                            loading={finishing}
-                            styles={{
-                                root: {
-                                    "&:hover": {
-                                        transform: "scale(1.02)",
-                                        boxShadow: "0 8px 20px rgba(220,38,38,0.35)"
-                                    }
-                                }
-                            }}
-                            onClick={finish}
-                        >
-                            Finish
-                        </Button>
-
-                        <Button
-                            size="xl"
-                            color="orange"
-                            variant="filled"
-                            disabled={!ticketId}
-                            loading={cancelling}
-                            onClick={cancel}
-                        >
-                            Cancel
-                        </Button>
-                    </Group>
-
-                    {message && (
-                        <Alert color={ticketId ? "red" : "yellow"} radius="md" w="100%">
-                            {message}
-                        </Alert>
-                    )}
-
-                </Stack>
-            </Paper>
-        </Center>
+                    <Button
+                        color="red"
+                        loading={cancelling}
+                        onClick={() => {
+                            setCancelOpen(false);
+                            void cancel();
+                        }}
+                    >
+                        Cancel ticket
+                    </Button>
+                </Group>
+            </Modal>
+        </PanelShell>
     );
 }

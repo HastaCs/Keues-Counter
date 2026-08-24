@@ -72,6 +72,10 @@ export default function CounterPanel({ config, onOpenConfig }: Props) {
             <VersionBadge />
 
             <Group pos="fixed" bottom={12} left={12} gap="xs" style={{ zIndex: 100 }}>
+                <Badge size="md" variant="light" color="blue">
+                    {config.counterName ?? "Counter"}
+                </Badge>
+
                 <Badge size="md" variant="light" color={statusColor[status]}>
                     {statusLabel[status]}
                 </Badge>

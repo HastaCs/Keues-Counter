@@ -73,8 +73,8 @@ Todas las listas vienen envueltas en `{data: [...]}`. Usar `json.data`.
 - `src/api/net.ts`: `isTauri`, `proxyBase`, `serverBase` y `configureTarget` (el frontend apunta al proxy local).
 - `src/api/keuesApi.ts`: toda la lógica de llamadas a la API (`getLocations`, `getFlows`, `getFlow`, `getCounters`, `getFlowQueueIds`, `callNext`, `attendTicket`, stubs `setCounterFree`, `manualCall`).
 - `src/constants/app.ts`: `APP_VERSION` importado de `package.json` (sube la versión al publicar; hoy `1.0.0`).
-- `src/components/config/ConfigScreen.tsx`: selector Ubicación→Flujo→Puesto. Pre-rellena desde `initialConfig`; `changeFlow` usa `getFlow` fresco + `getCounters` en `Promise.all` y filtra puestos por colas; guarda nombres (`locationName/flowName/counterName/counterCode`) además de IDs; botón "Back" (`onCancel`).
-- `src/components/flows/`: `CounterPanel.tsx` (despachador por `flowType`, badge del puesto abajo-izquierda, badge de estado SignalR, botón "Settings" arriba-derecha, `VersionBadge`), `CallTicketPanel.tsx`, `SetFreePanel.tsx`, `ManualCallPanel.tsx`.
+- `src/components/config/ConfigScreen.tsx`: selector Ubicación→Flujo→Puesto. Pre-rellena desde `initialConfig`; `changeFlow` usa `getFlow` fresco + `getCounters` en `Promise.all` y filtra puestos por colas; guarda nombres (`locationName/flowName/counterName/counterCode`) además de IDs; botón "Back" (`onCancel`); el label del select Flow muestra un badge con el tipo (`TicketMachine`/`SetFree`/`ManualCall`).
+- `src/components/flows/`: `PanelShell.tsx` y `NumberDisplay.tsx` (envoltorio común de las 3 cards: fondo radial, borde superior gradiente azul decorativo, header con título/subtítulo; número grande + caption), `CounterPanel.tsx` (despachador por `flowType`, badge del puesto abajo-izquierda, badge de estado SignalR, botón "Settings" arriba-derecha, `VersionBadge`), `CallTicketPanel.tsx`, `SetFreePanel.tsx`, `ManualCallPanel.tsx`.
 - `src/components/VersionBadge.tsx`: badge `v{APP_VERSION}` abajo a la derecha (para que soporte identifique la versión).
 
 ## Diseño visual (paneles de puesto)
@@ -89,6 +89,10 @@ Los paneles del counter siguen estos principios de diseño: **fondo claro**, car
 - Tipografía grande y legible (el operador debe ver el turno de un vistazo).
 - Paleta única en todos los paneles (azul `#2563eb` + azul oscuro `#1a1a2e`), independientemente del tipo de flujo.
 
+### Botones: solo colores del tema Mantine (regla obligatoria)
+
+Los **botones interactivos usan únicamente colores del tema Mantine**: `variant="filled"` + `color="blue" | "green" | "red"` (u `variant="default"/"outline"/"subtle"`). **Prohibido**: gradientes custom en botones y estilos `&:hover`/`&:active` manuales (transform, boxShadow, backgrounds inline) — Mantine ya gestiona hover (más claro) y active (más oscuro) automáticamente. Excepciones permitidas a los estilos custom: feedback de **estado** no relacionado con hover (p.ej. el dimming `[data-sent]` del círculo SetFree). Los gradientes `#2563eb → #3b82f6` quedan reservados para **fondos decorativos no interactivos** (header de `PanelShell`, borde superior de la card).
+
 ### Paleta de colores
 
 | Uso | Color |
@@ -96,8 +100,8 @@ Los paneles del counter siguen estos principios de diseño: **fondo claro**, car
 | Fondo principal | `#f8f9fa` |
 | Fondo cards | `#ffffff` |
 | Turno actual / número grande | `#1a1a2e` (azul muy oscuro) |
-| Acento principal (gradientes) | `#2563eb` → `#3b82f6` (azul) |
-| Puesto que atiende | `#374151` (gris oscuro) |
+| Fondos decorativos (header/borde card) | gradiente `#2563eb` → `#3b82f6` |
+| Botones interactivos | tema Mantine: `blue`, `green`, `red` (ver secciones por panel) |
 | Texto secundario / labels | `#6b7280` |
 | Texto muy tenue (estado vacío) | `#d1d5db` |
 | Bordes y separadores | `#e5e7eb` |
@@ -106,25 +110,24 @@ Los paneles del counter siguen estos principios de diseño: **fondo claro**, car
 
 ### CallTicketPanel (flowType 0)
 
-- Card blanca centrada, `p="xl"`, `shadow="md"`, `w=450`.
-- Número del turno actual: `fontSize: 96`, `fw=900`, color `#1a1a2e`.
-- Label "Current ticket" debajo, `size="sm"` `c="dimmed"`.
-- Botón "Call next": `size="xl"`, gradiente azul `#2563eb` → `#3b82f6`.
-- Botón "Finish": `size="xl"`, `color="red"`, `disabled` si no hay turno activo.
+- `PanelShell` (título = flowName, subtítulo = counterName) + `NumberDisplay` ("Current ticket").
+- "Call next": `variant="filled"` `color="blue"`, `size="xl"`, full-width; `loading={calling}` + guard anti doble-click.
+- "Finish": acción principal debajo — `variant="filled"` `color="green"`, `size="xl"`, full-width, `disabled` sin turno.
+- "Cancel ticket": discreto abajo — `variant="subtle"`, gris tenue, icono `IconCircleX`; abre **Modal de confirmación** ("Cancel ticket C-42? The customer will lose their turn.") con "Keep ticket" / "Cancel ticket" (rojo).
 - Errores en `Alert` (rojo si hay turno activo, amarillo si no hay turnos).
 
 ### SetFreePanel (flowType 1)
 
-- Card blanca centrada, `p="xl"`, `shadow="md"`, `w=450`, contenido centrado.
-- Botón "Mark as free": circular (`radius="100%"`, 180×180), gradiente azul `#2563eb` → `#3b82f6`.
-- Mensaje de éxito en `Alert` azul.
+- `PanelShell` (título = counterName).
+- Botón circular "FREE": `radius="100%"`, 180×180, `variant="filled"` `color="blue"`, icono `IconArrowUp` + texto "FREE"; dimming `[data-sent]` como feedback de estado.
+- Éxito vía notificación (verde); errores en `Alert` amarillo.
 
 ### ManualCallPanel (flowType 2)
 
-- Card blanca centrada, `p="xl"`, `shadow="md"`, `w=450`, contenido centrado.
-- Número actual: `fontSize: 96`, `fw=900`, color `#1a1a2e`.
-- Botones `+1`/`−1` y `+10`/`−10` en `SimpleGrid` circular: ±1 `variant="default"` borde `#1a1a2e`, ±10 gradiente azul `#2563eb` → `#3b82f6`.
+- `PanelShell` (título = flowName, subtítulo = counterName) + `NumberDisplay` ("Current number"). Valor inicial 1.
+- Botones circulares 110×110 en `SimpleGrid`: ±1 `variant="default"` estándar, ±10 `variant="filled"` `color="blue"`.
 - Botón "Reset to 1": `variant="outline"`, `color="dark"`.
+- Las llamadas a la API se **agrupan con debounce de 500ms** (la UI actualiza al instante; solo se envía el último valor).
 - Errores en `Alert` amarillo.
 
 ### Elementos comunes (gestionados desde CounterPanel)
@@ -156,7 +159,3 @@ Los paneles del counter siguen estos principios de diseño: **fondo claro**, car
 - Releases: **manuales** con Release Please (`npx release-please release-pr` / `release`). No hay GitHub Actions. La config está en `release-please-config.json` + `.release-please-manifest.json` y sincroniza `package.json`, `src-tauri/tauri.conf.json` y `src-tauri/Cargo.toml`.
 - Endpoints de SetFree/ManualCall aún no existen: esperar error 404, es esperado.
 
-## Datos actuales de la API (ejemplo real)
-
-- Location `e557056d-8183-4eeb-8f7e-213c7aa5fa17` (carnicería Sevilla) con counters: CARNICERIA (cola `615832e3`=CARNE), PESCADERÍA (`7922bc27`), Verdura y fruta (`aaf95964`).
-- Flujos: "n" (flowType 0), "manual" (flowType 2), "estoy libre" (flowType 1, apunta a la cola de verdura `aaf95964`).

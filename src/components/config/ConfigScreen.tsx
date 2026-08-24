@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
     Alert,
+    Badge,
     Box,
     Button,
     Group,
@@ -30,6 +31,9 @@ import Brand from "../Brand";
 
 import type { Location, Counter, Flow } from "../../types/models";
 import type { AppConfiguration } from "../../types/config";
+
+
+const flowTypeNames = ["TicketMachine", "SetFree", "ManualCall"];
 
 
 interface Props {
@@ -349,149 +353,109 @@ export default function ConfigScreen({ initialConfig, onSaved, onCancel }: Props
                         <Tabs.Panel value="settings" pt="md">
                             <Stack gap="sm">
 
-                    <Text size="sm" c="dimmed">
-                        Select location, flow and counter
-                    </Text>
+                                <Text size="sm" c="dimmed">
+                                    Select location, flow and counter
+                                </Text>
 
-                    <TextInput
-                        label="Machine name"
-                        value={deviceName}
-                        onChange={e => setDeviceName(e.currentTarget.value)}
-                        placeholder="Register 1"
-                    />
+                                <TextInput
+                                    label="Machine name"
+                                    value={deviceName}
+                                    onChange={e => setDeviceName(e.currentTarget.value)}
+                                    placeholder="Register 1"
+                                />
 
-                    <Group align="flex-end" gap="sm">
-                        <TextInput
-                            style={{ flex: 1 }}
-                            label="Server"
-                            value={server}
-                            onChange={e => setServer(e.currentTarget.value)}
-                            placeholder="http://localhost:5125"
-                        />
-                        <Button onClick={connect} loading={connecting} mb={1}>
-                            Connect
-                        </Button>
-                    </Group>
+                                <Group align="flex-end" gap="sm">
+                                    <TextInput
+                                        style={{ flex: 1 }}
+                                        label="Server"
+                                        value={server}
+                                        onChange={e => setServer(e.currentTarget.value)}
+                                        placeholder="http://localhost:5125"
+                                    />
+                                    <Button onClick={() => void connect()} loading={connecting} mb={1}>
+                                        Connect
+                                    </Button>
+                                </Group>
 
-                    <Select
-                        label="Location"
-                        placeholder="Select a location"
-                        data={
-                            locations.map(x => ({
-                                value: x.id,
-                                label: x.name
-                            }))
-                        }
-                        value={locationId}
-                        onChange={changeLocation}
-                        disabled={locations.length === 0}
-                        styles={{
-                            input: {
-                                backgroundColor: "#eef4ff",
-                                borderColor: "#b7c9f0",
-                                "&:focus-within": { borderColor: "#2563eb" }
-                            },
-                            dropdown: {
-                                borderColor: "#b7c9f0",
-                                boxShadow: "0 8px 20px rgba(37,99,235,0.12)"
-                            },
-                            option: {
-                                "&[data-combobox-selected]": { backgroundColor: "#2563eb" },
-                                "&:hover": { backgroundColor: "#eef4ff" }
-                            }
-                        }}
-                    />
+                                <Select
+                                    label="Location"
+                                    placeholder="Select a location"
+                                    data={
+                                        locations.map(x => ({
+                                            value: x.id,
+                                            label: x.name
+                                        }))
+                                    }
+                                    value={locationId}
+                                    onChange={id => void changeLocation(id)}
+                                    disabled={locations.length === 0}
+                                />
 
-                    <Select
-                        label="Flow"
-                        placeholder="Select a flow"
-                        data={
-                            flows.map(x => ({
-                                value: x.id,
-                                label: x.name
-                            }))
-                        }
-                        value={flowId}
-                        onChange={changeFlow}
-                        disabled={flows.length === 0}
-                        styles={{
-                            input: {
-                                backgroundColor: "#f5f3ff",
-                                borderColor: "#d4c8f5",
-                                "&:focus-within": { borderColor: "#7c3aed" }
-                            },
-                            dropdown: {
-                                borderColor: "#d4c8f5",
-                                boxShadow: "0 8px 20px rgba(124,58,237,0.12)"
-                            },
-                            option: {
-                                "&[data-combobox-selected]": { backgroundColor: "#7c3aed" },
-                                "&:hover": { backgroundColor: "#f5f3ff" }
-                            }
-                        }}
-                    />
+                                <Select
+                                    label={
+                                        <Group gap={6} wrap="nowrap">
+                                            <Text component="span" inherit>
+                                                Flow
+                                            </Text>
+                                            {selectedFlowType != null && (
+                                                <Badge size="sm" variant="light" color="blue">
+                                                    {flowTypeNames[selectedFlowType] ?? "Unknown"}
+                                                </Badge>
+                                            )}
+                                        </Group>
+                                    }
+                                    placeholder="Select a flow"
+                                    data={
+                                        flows.map(x => ({
+                                            value: x.id,
+                                            label: x.name
+                                        }))
+                                    }
+                                    value={flowId}
+                                    onChange={id => void changeFlow(id)}
+                                    disabled={flows.length === 0}
+                                />
 
-                    <Select
-                        label="Counter"
-                        placeholder="Select a counter"
-                        data={
-                            counters.map(x => ({
-                                value: x.id,
-                                label: x.name
-                            }))
-                        }
-                        value={counterId}
-                        onChange={setCounterId}
-                        disabled={counters.length === 0}
-                        styles={{
-                            input: {
-                                backgroundColor: "#f0fdf4",
-                                borderColor: "#bce3c6",
-                                "&:focus-within": { borderColor: "#16a34a" }
-                            },
-                            dropdown: {
-                                borderColor: "#bce3c6",
-                                boxShadow: "0 8px 20px rgba(22,163,74,0.12)"
-                            },
-                            option: {
-                                "&[data-combobox-selected]": { backgroundColor: "#16a34a" },
-                                "&:hover": { backgroundColor: "#f0fdf4" }
-                            }
-                        }}
-                    />
+                                <Select
+                                    label="Counter"
+                                    placeholder="Select a counter"
+                                    data={
+                                        counters.map(x => ({
+                                            value: x.id,
+                                            label: x.name
+                                        }))
+                                    }
+                                    value={counterId}
+                                    onChange={setCounterId}
+                                    disabled={counters.length === 0}
+                                />
 
-                    {flowId && counters.length === 0 && !searching && (
-                        <Alert color="yellow">
-                            No counters for this flow
-                        </Alert>
-                    )}
+                                {flowId && counters.length === 0 && !searching && (
+                                    <Alert color="yellow">
+                                        No counters for this flow
+                                    </Alert>
+                                )}
 
-                    {error && (
-                        <Alert color="red">
-                            {error}
-                        </Alert>
-                    )}
+                                {error && (
+                                    <Alert color="red">
+                                        {error}
+                                    </Alert>
+                                )}
 
-                    <Group grow>
-                        {onCancel && (
-                            <Button variant="default" onClick={onCancel}>
-                                Back
-                            </Button>
-                        )}
+                                <Group grow>
+                                    {onCancel && (
+                                        <Button variant="default" onClick={onCancel}>
+                                            Back
+                                        </Button>
+                                    )}
 
-                        <Button
-                            onClick={save}
-                            disabled={!server.trim() || !locationId || !flowId || !counterId}
-                        >
-                            Save and start
-                        </Button>
-                    </Group>
-
-                    {selectedFlowType != null && (
-                        <Text size="xs" c="dimmed" ta="center">
-                            Flow type: {["TicketMachine", "SetFree", "ManualCall"][selectedFlowType] ?? "Unknown"}
-                        </Text>
-                    )}
+                                    <Button
+                                        onClick={() => void save()}
+                                        disabled={!server.trim() || !locationId || !flowId || !counterId}
+                                    >
+                                        Save and start
+                                    </Button>
+                                </Group>
 
                             </Stack>
                         </Tabs.Panel>
