@@ -80,15 +80,18 @@ export async function downloadUpdate(): Promise<ElectronResponse> {
 
     try {
         let total = 0;
+        let downloaded = 0;
 
         await currentUpdate.download((event) => {
             if (event.event === "Started") {
                 total = event.data.contentLength ?? 0;
+                emit({ state: "downloading", percent: 0, version });
             }
             else if (event.event === "Progress") {
-                const chunkLength = event.data.chunkLength;
+                downloaded += event.data.chunkLength;
+
                 if (total > 0) {
-                    const percent = Math.round((chunkLength / total) * 100);
+                    const percent = Math.min(100, Math.round((downloaded / total) * 100));
                     emit({ state: "downloading", percent, version });
                 }
             }
