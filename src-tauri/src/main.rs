@@ -47,6 +47,10 @@ fn read_existing(file: &Path) -> Result<Value, String> {
 
 fn ensure_device_id(mut config: Value) -> (Value, bool) {
     let mut changed = false;
+    if !config.is_object() {
+        config = json!({});
+        changed = true;
+    }
     if let Some(obj) = config.as_object_mut() {
         let has_valid = obj
             .get("deviceId")
