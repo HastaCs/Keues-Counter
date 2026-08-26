@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0](https://github.com/HastaCs/Keues-Counter/compare/v1.1.0...v1.2.0) (2026-08-26)
+
+
+### 🚀 Features
+
+* Linux version ([f310c85](https://github.com/HastaCs/Keues-Counter/commit/f310c852b087dd882c9eac4bf6c9ab5ae0aab19e))
+
+
+### 🐛 Bug Fixes
+
+* enhance download progress tracking in downloadUpdate function ([df67725](https://github.com/HastaCs/Keues-Counter/commit/df67725a3fae5484a940ad6cec343129d16c2a84))
+
 ## [1.1.0](https://github.com/HastaCs/Keues-Counter/compare/v1.0.2...v1.1.0) (2026-08-25)
 
 
