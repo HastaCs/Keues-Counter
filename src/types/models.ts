@@ -37,3 +37,11 @@ export interface Flow {
     flowType: number;
     flowJson: string;
 }
+
+export interface Queue {
+    id: string;
+    name: string;
+    description: string;
+    code: string;
+    color: string;
+}

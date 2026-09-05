@@ -1,6 +1,6 @@
 import { serverBase } from "./net";
 
-import type { Location, Counter, Ticket, Flow, FlowNode } from "../types/models";
+import type { Location, Counter, Ticket, Flow, FlowNode, Queue } from "../types/models";
 
 
 export async function getLocations(server: string): Promise<Location[]> {
@@ -20,6 +20,21 @@ export async function getCounters(
 
     const response = await fetch(
         `${serverBase(server)}/api/counters?locationId=${locationId}`
+    );
+
+    const json = await response.json();
+
+    return json.data;
+}
+
+
+export async function getQueues(
+    server: string,
+    locationId: string
+): Promise<Queue[]> {
+
+    const response = await fetch(
+        `${serverBase(server)}/api/queues?locationId=${locationId}`
     );
 
     const json = await response.json();
@@ -148,6 +163,32 @@ export async function cancelTicket(
 
     if (!response.ok)
         throw new Error("Could not cancel the ticket");
+}
+
+
+export async function transferTicket(
+    server: string,
+    counterId: string,
+    ticketId: string,
+    queueId: string
+) {
+
+    const response = await fetch(
+        `${serverBase(server)}/api/counters/${counterId}/transfer-ticket`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                ticketId,
+                queueId
+            })
+        }
+    );
+
+    if (!response.ok)
+        throw new Error("Could not transfer the ticket");
 }
 
 
