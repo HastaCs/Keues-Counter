@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0](https://github.com/HastaCs/Keues-Counter/compare/v1.2.0...v1.3.0) (2026-09-06)
+
+
+### 🚀 Features
+
+* add queue selection and transfer functionality in CallTicketPanel ([4213c02](https://github.com/HastaCs/Keues-Counter/commit/4213c022fc0e35ab0d00beb08f0aa62a711eb80c))
+* transfer ticket feature ([791473c](https://github.com/HastaCs/Keues-Counter/commit/791473ccd8700fb6b886f0480f21bd990c08bd88))
+
 ## [1.2.0](https://github.com/HastaCs/Keues-Counter/compare/v1.1.0...v1.2.0) (2026-08-26)
 
 
