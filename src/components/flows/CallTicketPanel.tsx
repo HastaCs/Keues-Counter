@@ -28,6 +28,7 @@ export default function CallTicketPanel({ config }: Props) {
     const [transferOpen, setTransferOpen] = useState(false);
     const [transferring, setTransferring] = useState(false);
     const [queues, setQueues] = useState<Queue[]>([]);
+    const [selectedQueue, setSelectedQueue] = useState<string | null>(null);
 
 
     async function next() {
@@ -120,6 +121,7 @@ export default function CallTicketPanel({ config }: Props) {
 
         setMessage(null);
         setQueues([]);
+        setSelectedQueue(null);
 
         try {
             const result = await getQueues(config.server, config.locationId);
@@ -241,11 +243,11 @@ export default function CallTicketPanel({ config }: Props) {
                         {queues.map(queue => (
                             <Button
                                 key={queue.id}
-                                variant="default"
+                                variant={selectedQueue === queue.id ? "filled" : "default"}
+                                color={selectedQueue === queue.id ? "blue" : undefined}
                                 size="md"
                                 w="100%"
-                                loading={transferring}
-                                onClick={() => void transfer(queue.id)}
+                                onClick={() => setSelectedQueue(queue.id)}
                             >
                                 {queue.name}
                             </Button>
@@ -256,6 +258,15 @@ export default function CallTicketPanel({ config }: Props) {
                 <Group justify="flex-end" gap="sm" mt="lg">
                     <Button variant="subtle" onClick={() => setTransferOpen(false)}>
                         Close
+                    </Button>
+
+                    <Button
+                        color="blue"
+                        disabled={!selectedQueue}
+                        loading={transferring}
+                        onClick={() => selectedQueue && void transfer(selectedQueue)}
+                    >
+                        Accept
                     </Button>
                 </Group>
             </Modal>
