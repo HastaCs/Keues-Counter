@@ -20,13 +20,17 @@ import {
     getFlows,
     getFlow,
     getCounters,
-    getFlowQueueIds
+    getFlowQueueIds,
+    checkAccess,
+    login
 } from "../../api/keuesApi";
 
+import { setToken } from "../../api/auth";
 import { isTauri, saveConfiguration } from "../../api/appBridge";
 import { configureTarget } from "../../api/net";
 
 import UpdatePanel from "./UpdatePanel";
+import LoginModal from "./LoginModal";
 import Brand from "../Brand";
 
 import type { Location, Counter, Flow } from "../../types/models";
@@ -60,6 +64,12 @@ export default function ConfigScreen({ initialConfig, onSaved, onCancel }: Props
     const [searching, setSearching] = useState(false);
     const [connecting, setConnecting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const [checkingAccess, setCheckingAccess] = useState(false);
+    const [counterAuthorized, setCounterAuthorized] = useState<boolean | null>(null);
+    const [loginModalOpen, setLoginModalOpen] = useState(false);
+    const [loginLoading, setLoginLoading] = useState(false);
+    const [loginError, setLoginError] = useState<string | null>(null);
 
 
     useEffect(() => {
@@ -144,6 +154,77 @@ export default function ConfigScreen({ initialConfig, onSaved, onCancel }: Props
     }, [initialConfig]);
 
 
+    async function selectCounter(id: string | null) {
+
+        setCounterId(id);
+        setCounterAuthorized(null);
+        setLoginError(null);
+
+        if (!id)
+            return;
+
+        setCheckingAccess(true);
+
+        try {
+            const allowed = await checkAccess(server, id);
+
+            setCounterAuthorized(allowed);
+
+            if (!allowed) {
+                setLoginError(null);
+                setLoginModalOpen(true);
+            }
+            else {
+                setLoginModalOpen(false);
+            }
+        }
+        catch (e) {
+            setError((e as Error).message);
+        }
+        finally {
+            setCheckingAccess(false);
+        }
+    }
+
+
+    async function submitLogin(email: string, password: string) {
+
+        if (!counterId)
+            return;
+
+        setLoginLoading(true);
+        setLoginError(null);
+
+        try {
+            const jwt = await login(server, email, password);
+
+            setToken(jwt);
+
+            const allowed = await checkAccess(server, counterId);
+
+            if (!allowed) {
+                setCounterAuthorized(false);
+                setLoginError("This account does not have access to this counter");
+                return;
+            }
+
+            setCounterAuthorized(true);
+            setLoginModalOpen(false);
+        }
+        catch (e) {
+            setLoginError((e as Error).message);
+        }
+        finally {
+            setLoginLoading(false);
+        }
+    }
+
+
+    function cancelLogin() {
+        setLoginModalOpen(false);
+    }
+
+
     async function connect() {
 
         if (!server.trim())
@@ -188,6 +269,17 @@ export default function ConfigScreen({ initialConfig, onSaved, onCancel }: Props
                 }
             }
 
+            if (counterId) {
+                const allowed = await checkAccess(server, counterId);
+
+                setCounterAuthorized(allowed);
+
+                if (!allowed) {
+                    setLoginError(null);
+                    setLoginModalOpen(true);
+                }
+            }
+
             if (isTauri()) {
                 await saveConfiguration({
                     server: server.trim(),
@@ -220,6 +312,9 @@ export default function ConfigScreen({ initialConfig, onSaved, onCancel }: Props
         setCounters([]);
         setFlows([]);
 
+        setCounterAuthorized(null);
+        setLoginModalOpen(false);
+        setLoginError(null);
         setError(null);
 
         try {
@@ -242,6 +337,9 @@ export default function ConfigScreen({ initialConfig, onSaved, onCancel }: Props
         setFlowId(id);
         setCounterId(null);
 
+        setCounterAuthorized(null);
+        setLoginModalOpen(false);
+        setLoginError(null);
         setError(null);
 
         try {
@@ -426,7 +524,7 @@ export default function ConfigScreen({ initialConfig, onSaved, onCancel }: Props
                                         }))
                                     }
                                     value={counterId}
-                                    onChange={setCounterId}
+                                    onChange={id => void selectCounter(id)}
                                     disabled={counters.length === 0}
                                 />
 
@@ -451,7 +549,7 @@ export default function ConfigScreen({ initialConfig, onSaved, onCancel }: Props
 
                                     <Button
                                         onClick={() => void save()}
-                                        disabled={!server.trim() || !locationId || !flowId || !counterId}
+                                        disabled={!server.trim() || !locationId || !flowId || !counterId || counterAuthorized === false || checkingAccess}
                                     >
                                         Save and start
                                     </Button>
@@ -467,6 +565,16 @@ export default function ConfigScreen({ initialConfig, onSaved, onCancel }: Props
 
                 </Stack>
             </Paper>
+
+            <LoginModal
+                key={counterId ?? "none"}
+                opened={loginModalOpen}
+                counterName={counters.find(x => x.id === counterId)?.name}
+                loading={loginLoading}
+                error={loginError}
+                onCancel={cancelLogin}
+                onSubmit={(email, password) => void submitLogin(email, password)}
+            />
         </Box>
     );
 }

@@ -1,11 +1,79 @@
 import { serverBase } from "./net";
+import { getToken } from "./auth";
 
 import type { Location, Counter, Ticket, Flow, FlowNode, Queue } from "../types/models";
 
 
+function authHeaders(): Record<string, string> {
+    const token = getToken();
+
+    return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+
+export async function login(
+    server: string,
+    email: string,
+    password: string
+): Promise<string> {
+
+    const response = await fetch(
+        `${serverBase(server)}/api/users/login`,
+        {
+            method: "POST",
+            headers: {
+                ...authHeaders(),
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                email,
+                password
+            })
+        }
+    );
+
+    const text = await response.text();
+    const json = text ? JSON.parse(text) as { jwt?: string; error?: string } : {};
+
+    if (!response.ok)
+        throw new Error(json.error ?? "Invalid credentials");
+
+    if (!json.jwt)
+        throw new Error("Login response did not include a token");
+
+    return json.jwt;
+}
+
+
+export async function checkAccess(
+    server: string,
+    counterId: string
+): Promise<boolean> {
+
+    const response = await fetch(
+        `${serverBase(server)}/api/counters/${counterId}/check-access`,
+        {
+            method: "POST",
+            headers: {
+                ...authHeaders()
+            }
+        }
+    );
+
+    return response.ok;
+}
+
+
 export async function getLocations(server: string): Promise<Location[]> {
 
-    const response = await fetch(`${serverBase(server)}/api/locations`);
+    const response = await fetch(
+        `${serverBase(server)}/api/locations`,
+        {
+            headers: {
+                ...authHeaders()
+            }
+        }
+    );
 
     const json = await response.json();
 
@@ -19,7 +87,12 @@ export async function getCounters(
 ): Promise<Counter[]> {
 
     const response = await fetch(
-        `${serverBase(server)}/api/counters?locationId=${locationId}`
+        `${serverBase(server)}/api/counters?locationId=${locationId}`,
+        {
+            headers: {
+                ...authHeaders()
+            }
+        }
     );
 
     const json = await response.json();
@@ -34,7 +107,12 @@ export async function getQueues(
 ): Promise<Queue[]> {
 
     const response = await fetch(
-        `${serverBase(server)}/api/queues?locationId=${locationId}`
+        `${serverBase(server)}/api/queues?locationId=${locationId}`,
+        {
+            headers: {
+                ...authHeaders()
+            }
+        }
     );
 
     const json = await response.json();
@@ -49,7 +127,12 @@ export async function getFlows(
 ): Promise<Flow[]> {
 
     const response = await fetch(
-        `${serverBase(server)}/api/flows?locationId=${locationId}`
+        `${serverBase(server)}/api/flows?locationId=${locationId}`,
+        {
+            headers: {
+                ...authHeaders()
+            }
+        }
     );
 
     const json = await response.json();
@@ -64,7 +147,12 @@ export async function getFlow(
 ): Promise<Flow> {
 
     const response = await fetch(
-        `${serverBase(server)}/api/flows/${flowId}`
+        `${serverBase(server)}/api/flows/${flowId}`,
+        {
+            headers: {
+                ...authHeaders()
+            }
+        }
     );
 
     return await response.json();
@@ -97,6 +185,7 @@ export async function callNext(
         {
             method: "POST",
             headers: {
+                ...authHeaders(),
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
@@ -130,6 +219,7 @@ export async function attendTicket(
         {
             method: "POST",
             headers: {
+                ...authHeaders(),
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
@@ -153,6 +243,7 @@ export async function cancelTicket(
         {
             method: "POST",
             headers: {
+                ...authHeaders(),
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
@@ -178,6 +269,7 @@ export async function transferTicket(
         {
             method: "POST",
             headers: {
+                ...authHeaders(),
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
@@ -203,6 +295,7 @@ export async function setCounterFree(
         {
             method: "POST",
             headers: {
+                ...authHeaders(),
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
@@ -230,6 +323,7 @@ export async function manualCall(
         {
             method: "POST",
             headers: {
+                ...authHeaders(),
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({

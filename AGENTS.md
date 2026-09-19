@@ -50,10 +50,19 @@ Todas las listas vienen envueltas en `{data: [...]}`. Usar `json.data`.
 - `GET /api/flows?locationId=X` → `{data: [Flow]}`
 - `GET /api/flows/{id}` → **objeto directo** (no `{data}`). Usarlo siempre para el `flowJson` fresco (nunca un flujo guardado en estado React, puede estar obsoleto).
 - `GET /api/counters?locationId=X` → `{data: [Counter]}`
+- `GET /api/queues?locationId=X` → `{data: [Queue]}`
+- `POST /api/users/login` → body `{email, password}`; 200 `{jwt}` (además setea cookie `access_token` httponly); 400 `{error}` ante credenciales inválidas. `login` lanza error con ese mensaje.
+- `POST /api/counters/{counterId}/check-access` → sin body. **200 = acceso; cualquier otra respuesta = sin acceso** (403 si no lo tiene). `checkAccess` devuelve `response.ok` (no lanza con 403).
 - `POST .../call-next-ticket` → body `{counterId, flowId}`; respuesta `{ticketId, code}` o `null` si no hay turnos.
 - `POST .../attend-ticket` → body `{counterId, ticketId, flowId}` → 200.
 - `POST .../set-free` → body `{counterId, flowId}`. Ruta aún **stub**: devuelve 404. `setCounterFree` lanza error si `!ok`; el panel SetFree la llama aunque falle.
 - `POST .../call-manual-ticket` → body `{code, flowId, locationId, counterId}`. Ruta aún **stub**: devuelve 404. `manualCall` lanza error si `!ok`; el panel ManualCall la llama aunque falle.
+
+### Autenticación (access token)
+
+- El JWT del login se guarda **solo en memoria** (`src/api/auth.ts`: `getToken`/`setToken`); no se persiste ni entra en `AppConfiguration`. Al cerrar la app se pierde y se vuelve a pedir cuando haga falta.
+- `keuesApi.ts` añade `Authorization: Bearer <jwt>` a todas las llamadas cuando hay token (`authHeaders()`), aunque el backend también acepte la cookie `access_token`.
+- `ConfigScreen` comprueba `check-access` al seleccionar un puesto y al pulsar "Connect" con un puesto ya elegido. Si no hay acceso, abre `LoginModal` (email + contraseña) → `users/login` → guarda el jwt → reintenta `check-access`. El modal se puede cancelar y elegir otro puesto; mientras el puesto no esté autorizado, "Save and start" queda deshabilitado. De momento **no** se comprueba al arrancar `CounterPanel`.
 
 ### FlowType (enum .NET)
 
@@ -71,9 +80,11 @@ Todas las listas vienen envueltas en `{data: [...]}`. Usar `json.data`.
 - `src/types/models.ts`: `Location`, `Counter`, `Ticket`, `Flow`, `FlowNode`.
 - `src/api/appBridge.ts`: bridge con el backend Tauri (`saveConfiguration`/`loadConfiguration`/updater vía `invoke` y `@tauri-apps/plugin-updater`).
 - `src/api/net.ts`: `isTauri`, `proxyBase`, `serverBase` y `configureTarget` (el frontend apunta al proxy local).
-- `src/api/keuesApi.ts`: toda la lógica de llamadas a la API (`getLocations`, `getFlows`, `getFlow`, `getCounters`, `getFlowQueueIds`, `callNext`, `attendTicket`, stubs `setCounterFree`, `manualCall`).
+- `src/api/keuesApi.ts`: toda la lógica de llamadas a la API (`getLocations`, `getFlows`, `getFlow`, `getCounters`, `getQueues`, `getFlowQueueIds`, `login`, `checkAccess`, `callNext`, `attendTicket`, stubs `setCounterFree`, `manualCall`).
+- `src/api/auth.ts`: token JWT del login **solo en memoria** (`getToken`/`setToken`).
 - `src/constants/app.ts`: `APP_VERSION` importado de `package.json` (sube la versión al publicar; hoy `1.0.0`).
-- `src/components/config/ConfigScreen.tsx`: selector Ubicación→Flujo→Puesto. Pre-rellena desde `initialConfig`; `changeFlow` usa `getFlow` fresco + `getCounters` en `Promise.all` y filtra puestos por colas; guarda nombres (`locationName/flowName/counterName/counterCode`) además de IDs; botón "Back" (`onCancel`); el label del select Flow muestra un badge con el tipo (`TicketMachine`/`SetFree`/`ManualCall`).
+- `src/components/config/ConfigScreen.tsx`: selector Ubicación→Flujo→Puesto. Pre-rellena desde `initialConfig`; `changeFlow` usa `getFlow` fresco + `getCounters` en `Promise.all` y filtra puestos por colas; guarda nombres (`locationName/flowName/counterName/counterCode`) además de IDs; botón "Back" (`onCancel`); el label del select Flow muestra un badge con el tipo (`TicketMachine`/`SetFree`/`ManualCall`); al elegir/conectar un puesto hace `check-access` y, si no hay acceso, abre `LoginModal`.
+- `src/components/config/LoginModal.tsx`: modal de autorización (email + contraseña) que hace `users/login` y reintenta `check-access`.
 - `src/components/flows/`: `PanelShell.tsx` y `NumberDisplay.tsx` (envoltorio común de las 3 cards: fondo radial, borde superior gradiente azul decorativo, header con título/subtítulo; número grande + caption), `CounterPanel.tsx` (despachador por `flowType`, badge del puesto abajo-izquierda, badge de estado SignalR, botón "Settings" arriba-derecha, `VersionBadge`), `CallTicketPanel.tsx`, `SetFreePanel.tsx`, `ManualCallPanel.tsx`.
 - `src/components/VersionBadge.tsx`: badge `v{APP_VERSION}` abajo a la derecha (para que soporte identifique la versión).
 
