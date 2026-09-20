@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/HastaCs/Keues-Counter/compare/v1.3.0...v1.4.0) (2026-09-19)
+
+
+### 🚀 Features
+
+* implement authentication flow with login modal and token management ([51b7048](https://github.com/HastaCs/Keues-Counter/commit/51b70481f9af0a0afe64b141d41fde1e39268648))
+
 ## [1.3.0](https://github.com/HastaCs/Keues-Counter/compare/v1.2.0...v1.3.0) (2026-09-06)
 
 
