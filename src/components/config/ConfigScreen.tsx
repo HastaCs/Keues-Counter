@@ -159,31 +159,7 @@ export default function ConfigScreen({ initialConfig, onSaved, onCancel }: Props
         setCounterId(id);
         setCounterAuthorized(null);
         setLoginError(null);
-
-        if (!id)
-            return;
-
-        setCheckingAccess(true);
-
-        try {
-            const allowed = await checkAccess(server, id);
-
-            setCounterAuthorized(allowed);
-
-            if (!allowed) {
-                setLoginError(null);
-                setLoginModalOpen(true);
-            }
-            else {
-                setLoginModalOpen(false);
-            }
-        }
-        catch (e) {
-            setError((e as Error).message);
-        }
-        finally {
-            setCheckingAccess(false);
-        }
+        setLoginModalOpen(false);
     }
 
 
@@ -210,6 +186,8 @@ export default function ConfigScreen({ initialConfig, onSaved, onCancel }: Props
 
             setCounterAuthorized(true);
             setLoginModalOpen(false);
+
+            await persist();
         }
         catch (e) {
             setLoginError((e as Error).message);
@@ -266,17 +244,6 @@ export default function ConfigScreen({ initialConfig, onSaved, onCancel }: Props
                             )
                         );
                     }
-                }
-            }
-
-            if (counterId) {
-                const allowed = await checkAccess(server, counterId);
-
-                setCounterAuthorized(allowed);
-
-                if (!allowed) {
-                    setLoginError(null);
-                    setLoginModalOpen(true);
                 }
             }
 
@@ -374,6 +341,39 @@ export default function ConfigScreen({ initialConfig, onSaved, onCancel }: Props
 
 
     async function save() {
+
+        if (!server.trim() || !locationId || !flowId || !counterId)
+            return;
+
+        if (counterAuthorized !== true) {
+            setCheckingAccess(true);
+            setError(null);
+
+            try {
+                const allowed = await checkAccess(server, counterId);
+
+                setCounterAuthorized(allowed);
+
+                if (!allowed) {
+                    setLoginError(null);
+                    setLoginModalOpen(true);
+                    return;
+                }
+            }
+            catch (e) {
+                setError((e as Error).message);
+                return;
+            }
+            finally {
+                setCheckingAccess(false);
+            }
+        }
+
+        await persist();
+    }
+
+
+    async function persist() {
 
         if (!server.trim() || !locationId || !flowId || !counterId)
             return;
@@ -549,7 +549,8 @@ export default function ConfigScreen({ initialConfig, onSaved, onCancel }: Props
 
                                     <Button
                                         onClick={() => void save()}
-                                        disabled={!server.trim() || !locationId || !flowId || !counterId || counterAuthorized === false || checkingAccess}
+                                        loading={checkingAccess}
+                                        disabled={!server.trim() || !locationId || !flowId || !counterId}
                                     >
                                         Save and start
                                     </Button>
