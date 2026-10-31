@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/HastaCs/Keues-Counter/compare/v1.4.0...v1.4.1) (2026-09-26)
+
+
+### 🐛 Bug Fixes
+
+* refactor counter access handling and improve login modal logic ([8b05205](https://github.com/HastaCs/Keues-Counter/commit/8b05205494519508b1e94d6ec9bedb74664f8159))
+
 ## [1.4.0](https://github.com/HastaCs/Keues-Counter/compare/v1.3.0...v1.4.0) (2026-09-19)
 
 
